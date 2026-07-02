@@ -1,5 +1,6 @@
 import os
 import base64
+import asyncio
 import time
 from typing import Optional, Dict, Any, List
 import httpx
@@ -27,29 +28,29 @@ class GreenhouseClient:
         self._rate_limit_window = 10
         self._rate_limit_max = 50
     
-    def _rate_limit(self):
+    async def _rate_limit(self):
         current_time = time.time()
         if current_time - self._last_request_time > self._rate_limit_window:
             self._request_count = 0
             self._last_request_time = current_time
-        
+
         if self._request_count >= self._rate_limit_max:
             sleep_time = self._rate_limit_window - (current_time - self._last_request_time)
             if sleep_time > 0:
-                time.sleep(sleep_time)
+                await asyncio.sleep(sleep_time)
                 self._request_count = 0
                 self._last_request_time = time.time()
-        
+
         self._request_count += 1
     
     async def _make_request(
-        self, 
-        method: str, 
-        endpoint: str, 
+        self,
+        method: str,
+        endpoint: str,
         params: Optional[Dict[str, Any]] = None,
         json_data: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        self._rate_limit()
+        await self._rate_limit()
         
         url = f"{self.base_url}/{endpoint}"
         
@@ -65,7 +66,7 @@ class GreenhouseClient:
             
             if response.status_code == 429:
                 retry_after = int(response.headers.get("Retry-After", 10))
-                time.sleep(retry_after)
+                await asyncio.sleep(retry_after)
                 return await self._make_request(method, endpoint, params, json_data)
             
             response.raise_for_status()

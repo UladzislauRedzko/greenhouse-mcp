@@ -340,12 +340,80 @@ async def list_applications(
             created_after=created_after,
             created_before=created_before
         )
+        has_more = len(applications) == per_page
         if ctx:
-            ctx.info(f"Retrieved {len(applications)} applications")
-        return applications
+            ctx.info(f"Retrieved {len(applications)} applications" + (" (more pages available)" if has_more else ""))
+        return {
+            "results": applications,
+            "count": len(applications),
+            "page": page,
+            "per_page": per_page,
+            "has_more": has_more,
+            "warning": "Results may be truncated. Use 'page' parameter to retrieve more." if has_more else None,
+        }
     except Exception as e:
         if ctx:
             ctx.error(f"Failed to list applications: {str(e)}")
+        raise
+
+
+@mcp.tool
+async def list_all_applications(
+    job_id: Optional[int] = None,
+    candidate_id: Optional[int] = None,
+    status: Optional[str] = None,
+    created_after: Optional[str] = None,
+    created_before: Optional[str] = None,
+    max_records: int = 2000,
+    ctx: Context = None
+) -> Dict[str, Any]:
+    """
+    Fetch ALL applications across all pages automatically.
+    Use this for analytics and reporting to avoid pagination truncation.
+
+    Args:
+        job_id: Filter by job ID
+        candidate_id: Filter by candidate ID
+        status: Filter by application status
+        created_after: ISO 8601 date — REQUIRED for date-bounded queries
+        created_before: ISO 8601 date to filter applications created before
+        max_records: Safety limit on total records fetched (default 2000)
+
+    Returns:
+        All matching applications with total count and date range metadata
+    """
+    try:
+        gh_client = get_client()
+        all_results = []
+        page = 1
+
+        while len(all_results) < max_records:
+            batch = await gh_client.list_applications(
+                per_page=250,
+                page=page,
+                job_id=job_id,
+                candidate_id=candidate_id,
+                status=status,
+                created_after=created_after,
+                created_before=created_before,
+            )
+            all_results.extend(batch)
+            if ctx:
+                ctx.info(f"Fetched page {page} ({len(batch)} records, {len(all_results)} total)")
+            if len(batch) < 250:
+                break
+            page += 1
+
+        dates = [r["applied_at"] for r in all_results if r.get("applied_at")]
+        return {
+            "results": all_results,
+            "count": len(all_results),
+            "date_range": {"earliest": min(dates), "latest": max(dates)} if dates else None,
+            "truncated": len(all_results) >= max_records,
+        }
+    except Exception as e:
+        if ctx:
+            ctx.error(f"Failed to fetch all applications: {str(e)}")
         raise
 
 
