@@ -313,10 +313,10 @@ async def list_applications(
     created_after: Optional[str] = None,
     created_before: Optional[str] = None,
     ctx: Context = None
-) -> List[Dict[str, Any]]:
+) -> Dict[str, Any]:
     """
     List applications in Greenhouse.
-    
+
     Args:
         per_page: Number of results per page (max 500)
         page: Page number to retrieve
@@ -325,9 +325,9 @@ async def list_applications(
         status: Filter by application status
         created_after: ISO 8601 date to filter applications created after
         created_before: ISO 8601 date to filter applications created before
-    
+
     Returns:
-        List of application objects
+        Object with results list, count, page info, and has_more flag
     """
     try:
         gh_client = get_client()
