@@ -418,6 +418,80 @@ async def list_all_applications(
 
 
 @mcp.tool
+async def sourcing_report(
+    created_after: str,
+    created_before: str,
+    ctx: Context = None
+) -> Dict[str, Any]:
+    """
+    Generate a sourcing activity report for a given date range.
+    Automatically fetches all pages across all jobs and aggregates by sourcer and job.
+    Use this instead of list_all_applications for weekly/monthly reports.
+
+    Args:
+        created_after: ISO 8601 start date, e.g. "2026-06-24T00:00:00.000Z"
+        created_before: ISO 8601 end date, e.g. "2026-06-30T23:59:59.000Z"
+
+    Returns:
+        Aggregated sourcing stats by sourcer and by job
+    """
+    try:
+        gh_client = get_client()
+
+        jobs = await gh_client.list_jobs(per_page=500, status="open")
+        job_names = {j["id"]: j["name"] for j in jobs}
+
+        by_sourcer: Dict[str, Any] = {}
+        by_job: Dict[str, Any] = {}
+        total = 0
+
+        for job_id, job_name in job_names.items():
+            page = 1
+            while True:
+                batch = await gh_client.list_applications(
+                    per_page=250,
+                    page=page,
+                    job_id=job_id,
+                    created_after=created_after,
+                    created_before=created_before,
+                )
+                for app in batch:
+                    total += 1
+                    credited = app.get("credited_to") or {}
+                    sourcer = f"{credited.get('first_name', '')} {credited.get('last_name', '')}".strip() or "Unknown"
+
+                    if sourcer not in by_sourcer:
+                        by_sourcer[sourcer] = {"total": 0, "by_job": {}}
+                    by_sourcer[sourcer]["total"] += 1
+                    by_sourcer[sourcer]["by_job"][job_name] = by_sourcer[sourcer]["by_job"].get(job_name, 0) + 1
+
+                    if job_name not in by_job:
+                        by_job[job_name] = {"total": 0, "by_sourcer": {}}
+                    by_job[job_name]["total"] += 1
+                    by_job[job_name]["by_sourcer"][sourcer] = by_job[job_name]["by_sourcer"].get(sourcer, 0) + 1
+
+                if ctx:
+                    ctx.info(f"{job_name}: page {page} ({len(batch)} records)")
+                if len(batch) < 250:
+                    break
+                page += 1
+
+        by_sourcer = dict(sorted(by_sourcer.items(), key=lambda x: x[1]["total"], reverse=True))
+        by_job = dict(sorted(by_job.items(), key=lambda x: x[1]["total"], reverse=True))
+
+        return {
+            "period": {"from": created_after, "to": created_before},
+            "total": total,
+            "by_sourcer": by_sourcer,
+            "by_job": by_job,
+        }
+    except Exception as e:
+        if ctx:
+            ctx.error(f"Failed to generate sourcing report: {str(e)}")
+        raise
+
+
+@mcp.tool
 async def get_application(
     application_id: int,
     ctx: Context = None
