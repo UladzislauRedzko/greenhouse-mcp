@@ -1,6 +1,6 @@
 # Greenhouse MCP Server 🌱
 
-An MCP (Model Context Protocol) server for interacting with the Greenhouse Harvest API. This server enables AI agents to manage recruitment workflows through Greenhouse's applicant tracking system.
+An MCP (Model Context Protocol) server for interacting with the Greenhouse Harvest API v3. This server enables AI agents to manage recruitment workflows through Greenhouse's applicant tracking system.
 
 ## Features
 
@@ -33,7 +33,7 @@ The Greenhouse MCP server provides tools for:
 
 ### Prerequisites
 - Python 3.9+
-- Greenhouse API key (obtain from your Greenhouse admin panel)
+- Greenhouse Harvest v3 OAuth credentials
 
 ### Install via pip
 ```bash
@@ -52,9 +52,21 @@ pip install -e .
 Create a `.env` file in your project root:
 
 ```env
-GREENHOUSE_API_KEY=your_api_key_here
-GREENHOUSE_BASE_URL=https://harvest.greenhouse.io/v1  # Optional, this is the default
+GREENHOUSE_CLIENT_ID=your_client_id_here
+GREENHOUSE_CLIENT_SECRET=your_client_secret_here
+
+# Optional: Greenhouse user id used for request attribution.
+# If omitted, Greenhouse uses the integration service user attached to the OAuth credentials.
+GREENHOUSE_USER_ID=
+
+# Optional defaults
+GREENHOUSE_BASE_URL=https://harvest.greenhouse.io/v3
+GREENHOUSE_AUTH_URL=https://auth.greenhouse.io/token
 ```
+
+Do not commit `.env`. Client secrets and access tokens must stay local to each machine.
+
+To create credentials in Greenhouse, create a Harvest V3 (OAuth) API credential and enable the scopes needed by this MCP server.
 
 ## Usage
 
@@ -79,7 +91,9 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
       "command": "uvx",
       "args": ["greenhouse-mcp"],
       "env": {
-        "GREENHOUSE_API_KEY": "your_api_key_here"
+        "GREENHOUSE_CLIENT_ID": "your_client_id_here",
+        "GREENHOUSE_CLIENT_SECRET": "your_client_secret_here",
+        "GREENHOUSE_USER_ID": "optional_user_id_here"
       }
     }
   }
@@ -100,7 +114,8 @@ mcpd add greenhouse-mcp
 
 3. Configure environment variables:
 ```bash
-mcpd config args set greenhouse-mcp --env GREENHOUSE_API_KEY=your_api_key_here
+mcpd config args set greenhouse-mcp --env GREENHOUSE_CLIENT_ID=your_client_id_here
+mcpd config args set greenhouse-mcp --env GREENHOUSE_CLIENT_SECRET=your_client_secret_here
 ```
 
 4. Start the MCPD daemon:
@@ -147,7 +162,7 @@ pip install -e ".[dev]"
 
 # Copy environment variables
 cp .env.example .env
-# Edit .env with your API key
+# Edit .env with your OAuth credentials
 ```
 
 ### Running Tests
@@ -168,10 +183,18 @@ ruff check src/
 
 ## Security Notes
 
-- Never commit your API key to version control
+- Never commit your OAuth client secret, access token, or API credentials to version control
 - Use environment variables or secure secret management
 - The server only accepts connections from localhost by default
 - All API requests use HTTPS
+
+## Harvest API v3 Notes
+
+- Authentication uses OAuth 2.0 Client Credentials.
+- List endpoints use cursor-based pagination. The MCP tools still accept a `page` argument for compatibility, but the client follows Greenhouse `Link` headers internally.
+- v3 read endpoints generally use list endpoints with an `ids` filter for single-record lookups.
+- Application reports use `created_at`; v1's `applied_at` field is no longer used.
+- Application attribution now exposes `referrer_id` instead of the old nested `credited_to` object.
 
 ## Contributing
 
@@ -185,6 +208,6 @@ MIT License - see LICENSE file for details
 
 For issues related to:
 - This MCP server: Open an issue on GitHub
-- Greenhouse API: Consult [Greenhouse API documentation](https://developers.greenhouse.io/harvest.html)
+- Greenhouse API: Consult [Greenhouse Harvest API v3 documentation](https://harvestdocs.greenhouse.io/docs)
 - MCP Protocol: Visit [Model Context Protocol docs](https://modelcontextprotocol.io)
 - FastMCP: Check [FastMCP documentation](https://github.com/jlowin/fastmcp)

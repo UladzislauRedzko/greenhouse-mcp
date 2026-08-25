@@ -11,8 +11,11 @@ command = "uvx"
 args = ["greenhouse-mcp"]
 
 [server.environment]
-GREENHOUSE_API_KEY = "${GREENHOUSE_API_KEY}"
-GREENHOUSE_BASE_URL = "${GREENHOUSE_BASE_URL:-https://harvest.greenhouse.io/v1}"
+GREENHOUSE_CLIENT_ID = "${GREENHOUSE_CLIENT_ID}"
+GREENHOUSE_CLIENT_SECRET = "${GREENHOUSE_CLIENT_SECRET}"
+GREENHOUSE_USER_ID = "${GREENHOUSE_USER_ID:-}"
+GREENHOUSE_BASE_URL = "${GREENHOUSE_BASE_URL:-https://harvest.greenhouse.io/v3}"
+GREENHOUSE_AUTH_URL = "${GREENHOUSE_AUTH_URL:-https://auth.greenhouse.io/token}"
 
 [server.capabilities]
 tools = true

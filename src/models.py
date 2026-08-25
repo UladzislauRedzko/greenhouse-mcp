@@ -1,5 +1,6 @@
-from typing import Optional, List, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -36,25 +37,28 @@ class Application(BaseModel):
     id: int
     candidate_id: int
     prospect: bool = False
-    applied_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     rejected_at: Optional[datetime] = None
     last_activity_at: Optional[datetime] = None
-    source: Optional[Dict[str, Any]] = None
-    credited_to: Optional[Dict[str, Any]] = None
-    rejection_reason: Optional[Dict[str, Any]] = None
+    source_id: Optional[int] = None
+    referrer_id: Optional[int] = None
+    rejection_reason_id: Optional[int] = None
     rejection_details: Optional[Dict[str, Any]] = None
-    jobs: List[Dict[str, Any]] = []
+    job_id: Optional[int] = None
     job_post_id: Optional[int] = None
     status: str
-    current_stage: Optional[Dict[str, Any]] = None
+    stage_id: Optional[int] = None
     answers: List[Dict[str, Any]] = []
     custom_fields: Dict[str, Any] = {}
 
 
 class Note(BaseModel):
     body: str
-    visibility: str = Field(default="private", description="Options: 'admin_only', 'private', 'public'")
-    
+    visibility: str = Field(
+        default="private", description="Options: 'admin_only', 'private', 'public'"
+    )
+
 
 class CandidateCreateRequest(BaseModel):
     first_name: str
@@ -66,8 +70,8 @@ class CandidateCreateRequest(BaseModel):
     addresses: Optional[List[Dict[str, Any]]] = None
     tags: Optional[List[str]] = None
     custom_fields: Optional[List[Dict[str, Any]]] = None
-    
-    
+
+
 class ApplicationAdvanceRequest(BaseModel):
     from_stage_id: int
     to_stage_id: Optional[int] = None
