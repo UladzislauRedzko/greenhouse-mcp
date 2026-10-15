@@ -68,6 +68,42 @@ Do not commit `.env`. Client secrets and access tokens must stay local to each m
 
 To create credentials in Greenhouse, create a Harvest V3 (OAuth) API credential and enable the scopes needed by this MCP server.
 
+### Required scopes
+
+Enable exactly these Harvest permissions on the credential:
+
+```text
+Harvest -> Jobs -> List jobs
+
+Harvest -> Candidates -> List candidates
+Harvest -> Candidates -> Create candidates
+Harvest -> Candidates -> Update candidates
+
+Harvest -> Applications -> List applications
+Harvest -> Applications -> Move applications
+Harvest -> Applications -> Reject applications
+
+Harvest -> Notes -> Create notes
+
+Harvest -> Departments -> List departments
+Harvest -> Offices -> List offices
+Harvest -> Users -> List users
+```
+
+Read-only reference lists are also worth enabling, so an agent can look up
+`stage_id` and `rejection_reason_id` instead of guessing them:
+
+```text
+Harvest -> Application stages -> List application stages
+Harvest -> Job interview stages -> List job interview stages
+Harvest -> Rejection reasons -> List rejection reasons
+```
+
+Do not use `Select all`. Extra scopes widen the blast radius: if
+`GREENHOUSE_CLIENT_SECRET` leaks, the holder can call the Greenhouse API
+directly with every permission granted, regardless of what this server
+itself implements.
+
 ## Usage
 
 ### Running Locally with FastMCP
